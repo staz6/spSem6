@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <sys/stat.h>
 void _ls(const char *dir,int op_a,int op_l,int op_r)
 {
 	printf("%s",dir);
@@ -26,9 +26,12 @@ void _ls(const char *dir,int op_a,int op_l,int op_r)
 		}
 		exit(EXIT_FAILURE);
 	}
+	struct stat sbuf;
 	// disk cache
 	char *tmp[50];
 	int index =0;
+	char tmpr[128];
+
 	// Print directory
 	while ((d = readdir(dh)) != NULL)
 	{
@@ -39,14 +42,32 @@ void _ls(const char *dir,int op_a,int op_l,int op_r)
 		tmp[index]=d->d_name;
 		index++;
 		if(op_r){
-			_ls(d->d_name,0,0,0);
+
+			 strcpy(tmpr,dir);
+			 strcat(tmpr,"/");
+			 strcat(tmpr,d->d_name);
+			 printf("%s\n",tmpr);
+			 stat(tmpr, &sbuf); 
+			 if(sbuf.st_mode && S_ISDIR(sbuf.st_mode)) {
+            	 
+       		 } 
+			// _ls(tmpr,0,0,0);
+
 			
 		}
 		if(!op_r){
 			printf("%s ", d->d_name);
 			
 		// check for -l
-		if(op_l) printf("\n");
+		if(op_l){
+			stat(d->d_name, &sbuf);
+			printf(" %d ", (int)sbuf.st_nlink);
+			printf("%d ",(int)sbuf.st_mode); 
+			printf(" %d", sbuf.st_uid);
+			printf(" %d", sbuf.st_gid); 
+			printf(" %5d", (int)sbuf.st_size);
+			printf("\n");
+		} 
 		}
 	}
 	if(op_r){
@@ -61,6 +82,25 @@ void find(char* arg){
 	int result =  strcmp(arg,"hola");
 	// printf("%d",result);
 }
+void ls_r(char path[]) { 
+    DIR * dir; struct dirent * file; struct stat sbuf; 
+    char tmp[128]; 
+    dir = opendir(path); 
+    while(file=readdir(dir)) { 
+        if(file->d_name[0] == '.') continue; 
+        strcpy(tmp, path); 
+        strcat(tmp, "/"); 
+        strcat(tmp, file->d_name); 
+        //printf("%s\n", tmp); 
+        stat(tmp, &sbuf); 
+        if(sbuf.st_mode && S_ISDIR(sbuf.st_mode)) {
+        	printf("child directory ->"); 
+            printf("%s/\n", tmp); 
+            ls_r(tmp); 
+        } else  
+            printf("%s\n", file->d_name); 
+    } 
+}
 int main(int argc, const char *argv[])
 {
 
@@ -68,6 +108,7 @@ int main(int argc, const char *argv[])
 	{
 		// If no args are giving
 		_ls(".",0,0,0);
+
 	}
 	else if (argc == 2)
 	{
@@ -88,7 +129,12 @@ int main(int argc, const char *argv[])
 				}
 				p++;
 			}
-			_ls(".",op_a,op_l,op_r);
+			if(op_r){
+				ls_r(".");
+			}
+			else{
+				_ls(".",op_a,op_l,op_r);
+			}
 		}
 	}
 	return 0;
