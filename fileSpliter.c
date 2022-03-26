@@ -2,7 +2,14 @@
 #include <math.h>   // ceil()
 #include <stdlib.h> // exit()
 #include <sys/stat.h>
+#include<pthread.h>
+void *print()
+{
+   printf("\nThread Created");
+}
 int main(int argc, char *argv[]) {
+	pthread_t *t;
+
 	struct stat st;
 	char part_filename[]="dump.txt";
 	FILE *ptr_source, *ptr_part;
@@ -20,6 +27,7 @@ int main(int argc, char *argv[]) {
 		perror("Could not open file to split");
 		exit(1);
 	}
+	t=(pthread_t *)malloc(atol(argv[1]+1) * sizeof(pthread_t ));
 	stat(argv[2], &st);
 	int size = st.st_size;
 	printf("size is%d\n",size);
@@ -43,13 +51,15 @@ int main(int argc, char *argv[]) {
 			perror("Could not open part for writing");
 			exit(1);
 		}
-
+		pthread_create(&t[i],NULL,print,NULL);
 		for (written_bytes = 0; written_bytes < part_size &&
 		    (byte = fgetc(ptr_source)) != EOF; written_bytes++)
 		{
+			
 			fputc(byte, ptr_part);
+			
 		}
-
+		pthread_join(t[i],NULL);
 		printf("(%lu bytes)", written_bytes);
 		fclose(ptr_part);
 	}
